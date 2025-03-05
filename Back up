@@ -1,0 +1,686 @@
+<body class="bg-light">
+<div class="container-fluid d-flex justify-content-center align-items-center vh-100">
+  <div class="card shadow-lg w-50">
+    <div class="card-header bg-primary text-white text-center">
+      <h2>Edit Profile</h2>
+    </div>
+    <div class="card-body">
+      
+      <!-- ฟอร์มต้องมี id="updateProfileFrm" -->
+      <form method="post" id="updateProfileFrm">
+        <input type="hidden" name="exmne_id" value="<?php echo $id; ?>">
+
+        <div class="form-group">
+          <label>Fullname</label>
+          <input type="text" name="exFullname" class="form-control" required value="<?php echo $selExmne['exmne_fullname']; ?>">
+
+        </div>
+
+        <div class="form-group">
+          <label>Gender</label>
+          <select class="form-control" name="exGender">
+          <option value="<?php echo $selExmne['exmne_gender']; ?>">
+            <?php echo $selExmne['exmne_gender']; ?>
+          </option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Birthdate</label>
+          <input type="date" name="exBdate" class="form-control" required
+                 value="<?php echo date('Y-m-d', strtotime($selExmne['exmne_birthdate'])); ?>" required>
+        </div>
+
+        <div class="form-group">
+          <label>Year Level</label>
+          <input type="text" name="exYrlvl" class="form-control" 
+                 value="<?php echo htmlspecialchars($selExmne['exmne_year_level']); ?>" required>
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="exEmail" class="form-control"
+                 value="<?php echo htmlspecialchars($selExmne['exmne_email']); ?>" required>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input type="text" name="exPass" class="form-control"
+                 value="<?php echo htmlspecialchars($selExmne['exmne_password']); ?>" required>
+        </div>
+
+        <div class="d-flex justify-content-center">
+          <button type="submit" class="btn btn-primary w-50">Update Now</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
+</body>
+
+
+<?php
+// Get `examId` from GET request
+$examId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Retrieve exam details
+$sqlExam = "SELECT * FROM exam_tbl WHERE ex_id = :examId";
+$stmtExam = $conn->prepare($sqlExam);
+$stmtExam->bindParam(':examId', $examId, PDO::PARAM_INT);
+$stmtExam->execute();
+
+$exTitle = "";
+$exDesc = "";
+$exDisplayLimit = 0;
+
+if ($stmtExam->rowCount() > 0) {
+    $rExam = $stmtExam->fetch();
+    $exTitle = $rExam['ex_title'];
+    $exDesc = $rExam['ex_description'];
+    $exDisplayLimit = $rExam['ex_questlimit_display'];
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Exam Page</title>
+</head>
+<body>
+<div class="app-main__outer">
+    <div class="app-main__inner">
+        <div class="col-md-12">
+            <div class="app-page-title">
+                <div class="page-title-wrapper">
+                    <div class="page-title-heading">
+                        <div>
+                            <?php echo htmlspecialchars($exTitle); ?>
+                            <div class="page-title-subheading">
+                                <?php echo htmlspecialchars($exDesc); ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-title-actions mr-5" style="font-size: 20px;">
+                        <label>Remaining Time: </label>
+                        <span id="timerDisplay" style="font-size: 25px; color: blue;">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 p-0 mb-4">
+            <form method="post" id="submitAnswerFrm">
+                <input type="hidden" name="submitted" value="1">
+                <input type="hidden" name="exam_id" value="<?php echo $examId; ?>">
+                <input type="hidden" name="time_spent" id="timeSpent">
+
+                <table class="align-middle mb-0 table table-borderless table-striped table-hover" id="tableList">
+                <?php
+                $exDisplayLimit = (int)$exDisplayLimit;
+
+                $sqlQuest = "SELECT * FROM exam_question_tbl 
+                             WHERE exam_id = :examId 
+                             ORDER BY RAND() 
+                             LIMIT $exDisplayLimit";
+                $stmtQuest = $conn->prepare($sqlQuest);
+                $stmtQuest->bindParam(':examId', $examId, PDO::PARAM_INT);
+                $stmtQuest->execute();
+
+                if ($stmtQuest->rowCount() > 0) {
+                    $i = 1;
+                    while ($qRow = $stmtQuest->fetch()) {
+                        $questId = $qRow['eqt_id'];
+
+                        $choices = [
+                            $qRow['exam_ch1'],
+                            $qRow['exam_ch2'],
+                            $qRow['exam_ch3'],
+                            $qRow['exam_ch4'],
+                            $qRow['exam_ch5'],
+                        ];
+                        shuffle($choices);
+                        ?>
+                        <tr>
+                            <td>
+                                <p><b><?php echo $i++; ?>.) <?php echo htmlspecialchars($qRow['exam_question']); ?></b></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <?php for ($j = 1; $j <= 3; $j++) {
+                                    $picField = 'exam_pic' . $j;
+                                    if (!empty($qRow[$picField])) {
+                                        $imgData = base64_encode($qRow[$picField]);
+                                        $src = 'data:image/jpeg;base64,' . $imgData;
+                                        echo "<p><img src='{$src}' style='height:300px; width:auto; margin-bottom:10px;'></p>";
+                                    }
+                                } ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="row">
+                                    <?php foreach ($choices as $choice): ?>
+                                    <div class="col-md-6">
+                                        <div class="form-group pl-4">
+                                            <input name="answer[<?php echo $questId; ?>]"
+                                                value="<?php echo htmlspecialchars($choice); ?>"
+                                                class="form-check-input" type="radio" required>
+                                            <label class="form-check-label">
+                                                <?php echo htmlspecialchars($choice); ?>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    ?>
+                    <tr>
+                        <td style="padding: 20px;">
+                            <button type="button" id="submitAnswerBtn" class="btn btn-xlg btn-primary p-3 pl-4 pr-4 float-right">
+                                Submit
+                            </button>
+                        </td>
+                    </tr>
+                    <?php
+                } else {
+                    echo "<b>No question at this moment</b>";
+                }
+                ?>
+                </table>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('submitAnswerFrm');
+    let timeRemaining = parseInt(sessionStorage.getItem('timeRemaining'), 10) || 600;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timer = setInterval(() => {
+        timeRemaining--;
+        sessionStorage.setItem('timeRemaining', timeRemaining);
+
+        let minutes = Math.floor(timeRemaining / 60);
+        let seconds = timeRemaining % 60;
+        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (timeRemaining <= 0) {
+            clearInterval(timer);
+            Swal.fire("Time's up!", "The exam has ended.", "warning").then(() => form.submit());
+        }
+    }, 1000);
+
+    document.getElementById('submitAnswerBtn').addEventListener('click', function () {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you want to submit your answers?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, submit!',
+            cancelButtonText: 'No, cancel',
+        }).then((result) => {
+            if (result.isConfirmed) form.submit();
+        });
+    });
+});
+</script>
+</body>
+</html>
+
+<?php
+ob_start(); // เริ่มการบัฟเฟอร์ output
+
+include(dirname(__DIR__) . '/conn.php');
+
+$examId = $_GET['id'] ?? null;
+$selExam = $conn->query("SELECT * FROM exam_tbl WHERE ex_id='$examId'")->fetch(PDO::FETCH_ASSOC);
+
+// เมื่อฟอร์มถูกส่งมา
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $timeLimit = $_POST['examTimeLimit']; // เวลาเป็นนาที
+    $examineeId = $_SESSION['examineeSession']['exmne_id'] ?? null; // ดึง ID ผู้เข้าสอบจาก session
+
+    if ($examineeId) {
+        // เพิ่มรายการใหม่ใน exam_attempt
+        $stmtInsert = $conn->prepare("INSERT INTO exam_attempt (exmne_id, exam_id, time_limit, attempt_round) VALUES (:exmne_id, :exam_id, :time_limit, 1)");
+        $stmtInsert->execute([
+            ':exmne_id' => $examineeId,
+            ':exam_id' => $examId,
+            ':time_limit' => $timeLimit,
+        ]);
+    }
+
+    // เปลี่ยนหน้าไปยัง exam.php
+    header("Location: home.php?page=exam&id=$examId");
+    exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Exam Details</title>
+    <meta charset="UTF-8">
+</head>
+<body class="bg-light">
+<div class="container-fluid d-flex justify-content-center mt-5 mb-5 vh-75">
+    <div class="card shadow-lg w-50">
+        <div class="card-header bg-primary text-white text-center">
+            <h2><?php echo htmlspecialchars($selExam['ex_title']); ?></h2>
+        </div>
+        <div class="card-body mb-4">
+            <p class="text-muted text-center mb-5"><?php echo htmlspecialchars($selExam['ex_description']); ?></p>
+            <div class="text-center mb-1">
+                <h5>Number of Questions: <span class="badge badge-primary"><?php echo $selExam['ex_questlimit_display']; ?></span></h5>
+            </div>
+            <form method="post" action="">
+                <div class="form-group">
+                    <label for="examTimeLimit">Enter Time (in minutes):</label>
+                    <input type="number" id="examTimeLimit" name="examTimeLimit" class="form-control" placeholder="e.g., 30" required>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <button type="submit" class="btn btn-primary w-15">Start Exam</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+
+<?php
+// Get `examId` from GET request
+$examId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Retrieve exam details
+$sqlExam = "SELECT * FROM exam_tbl WHERE ex_id = :examId";
+$stmtExam = $conn->prepare($sqlExam);
+$stmtExam->bindParam(':examId', $examId, PDO::PARAM_INT);
+$stmtExam->execute();
+
+$exTitle = "";
+$exDesc = "";
+$exDisplayLimit = 0;
+
+if ($stmtExam->rowCount() > 0) {
+    $rExam = $stmtExam->fetch();
+    $exTitle = $rExam['ex_title'];
+    $exDesc = $rExam['ex_description'];
+    $exDisplayLimit = $rExam['ex_questlimit_display'];
+}
+
+// ดึงค่า time_limit จากฐานข้อมูล
+$sqlTimeLimit = "SELECT time_limit FROM exam_attempt WHERE exmne_id = :exmne_id AND exam_id = :exam_id ORDER BY examat_id DESC LIMIT 1";
+$stmtTimeLimit = $conn->prepare($sqlTimeLimit);
+$stmtTimeLimit->execute([
+    ':exmne_id' => $_SESSION['examineeSession']['exmne_id'],
+    ':exam_id' => $examId,
+]);
+$timeLimitRow = $stmtTimeLimit->fetch(PDO::FETCH_ASSOC);
+$examTimeLimit = $timeLimitRow['time_limit'] ?? 0; // ค่า time_limit จากฐานข้อมูล (เป็นนาที)
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Exam Page</title>
+</head>
+<body>
+<div class="app-main__outer">
+    <div class="app-main__inner">
+        <div class="col-md-12">
+            <div class="app-page-title">
+                <div class="page-title-wrapper">
+                    <div class="page-title-heading">
+                        <div>
+                            <?php echo htmlspecialchars($exTitle); ?>
+                            <div class="page-title-subheading">
+                                <?php echo htmlspecialchars($exDesc); ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-title-actions mr-5" style="font-size: 20px;">
+                        <label>Remaining Time: </label>
+                        <span id="timerDisplay" style="font-size: 25px; color: blue;">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12 p-0 mb-4">
+            <form method="post" id="submitAnswerFrm">
+                <input type="hidden" name="submit" value="1">
+                <input type="hidden" name="exam_id" value="<?php echo $examId; ?>">
+                <input type="hidden" name="time_spent" id="timeSpent">
+
+                <table class="align-middle mb-0 table table-borderless table-striped table-hover" id="tableList">
+                <?php
+                $exDisplayLimit = (int)$exDisplayLimit;
+
+                $sqlQuest = "SELECT * FROM exam_question_tbl 
+                             WHERE exam_id = :examId 
+                             ORDER BY RAND() 
+                             LIMIT $exDisplayLimit";
+                $stmtQuest = $conn->prepare($sqlQuest);
+                $stmtQuest->bindParam(':examId', $examId, PDO::PARAM_INT);
+                $stmtQuest->execute();
+
+                if ($stmtQuest->rowCount() > 0) {
+                    $i = 1;
+                    while ($qRow = $stmtQuest->fetch()) {
+                        $questId = $qRow['eqt_id'];
+                        $choices = [
+                            $qRow['exam_ch1'],
+                            $qRow['exam_ch2'],
+                            $qRow['exam_ch3'],
+                            $qRow['exam_ch4'],
+                            $qRow['exam_ch5'],
+                        ];
+                        shuffle($choices);
+                        ?>
+                        <tr>
+                            <td>
+                                <p><b><?php echo $i++; ?>.) <?php echo htmlspecialchars($qRow['exam_question']); ?></b></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <?php for ($j = 1; $j <= 3; $j++) {
+                                    $picField = 'exam_pic' . $j;
+                                    if (!empty($qRow[$picField])) {
+                                        $imgData = base64_encode($qRow[$picField]);
+                                        $src = 'data:image/jpeg;base64,' . $imgData;
+                                        echo "<p><img src='{$src}' style='height:300px; width:auto; margin-bottom:10px;'></p>";
+                                    }
+                                } ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="row">
+                                    <?php foreach ($choices as $choice): ?>
+                                    <div class="col-md-6">
+                                        <div class="form-group pl-4">
+                                            <input name="answer[<?php echo $questId; ?>]"
+                                                value="<?php echo htmlspecialchars($choice); ?>"
+                                                class="form-check-input" type="radio" required>
+                                            <label class="form-check-label">
+                                                <?php echo htmlspecialchars($choice); ?>
+                                            </label>
+                                            </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    ?>
+                    <tr>
+                        <td style="padding: 20px;">
+                            <button type="button" id="submitAnswerBtn" class="btn btn-xlg btn-primary p-3 pl-4 pr-4 float-right">
+                                Submit
+                            </button>
+                        </td>
+                    </tr>
+                    <?php
+                } else {
+                    echo "<b>No question at this moment</b>";
+                }
+                ?>
+                </table>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const timerDisplay = document.getElementById('timerDisplay');
+    const totalTime = <?php echo $examTimeLimit * 60; ?>; // Total time in seconds
+    let timeRemaining = localStorage.getItem('timeRemaining') 
+                        ? parseInt(localStorage.getItem('timeRemaining')) 
+                        : totalTime;
+
+    // Update the timer display
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
+
+    // Save answers to localStorage
+    const savedAnswers = JSON.parse(localStorage.getItem('savedAnswers')) || {};
+    for (const [name, value] of Object.entries(savedAnswers)) {
+        const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+        if (input) input.checked = true;
+    }
+
+    document.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.addEventListener('change', function () {
+            const savedAnswers = JSON.parse(localStorage.getItem('savedAnswers')) || {};
+            savedAnswers[this.name] = this.value;
+            localStorage.setItem('savedAnswers', JSON.stringify(savedAnswers));
+        });
+    });
+
+    // Timer logic
+    const timer = setInterval(() => {
+        if (timeRemaining > 0) {
+            timeRemaining--;
+            localStorage.setItem('timeRemaining', timeRemaining);
+            updateTimerDisplay();
+        } else {
+            clearInterval(timer);
+            Swal.fire("Time's up!", "The exam has ended.", "warning").then(() => {
+                localStorage.removeItem('timeRemaining');
+                localStorage.removeItem('savedAnswers');
+                document.getElementById('timeSpent').value = totalTime - timeRemaining;
+                document.getElementById('submitAnswerFrm').submit();
+            });
+        }
+    }, 1000);
+
+    updateTimerDisplay();
+
+    // Submit answers
+    // timeSpent จะถูกใช้ในการบันทึกเวลาที่ใช้ทั้งหมดในหน่วยวินาที
+    // time_limit จะเก็บเป็นนาที
+    document.getElementById('submitAnswerBtn').addEventListener('click', function () {
+        document.getElementById('timeSpent').value = totalTime - timeRemaining;
+        const formData = new FormData(document.getElementById('submitAnswerFrm'));
+        fetch('query/submitAnswerExe.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.res === "success") {
+                localStorage.removeItem('timeRemaining');
+                localStorage.removeItem('savedAnswers');
+                window.location.href = `home.php?page=result&id=<?php echo $examId; ?>`;
+            } else {
+                Swal.fire("Error", data.msg || "Submission failed.", "error");
+            }
+        })
+        .catch(error => console.error(error));
+    });
+});
+</script>
+
+</body>
+</html>
+
+
+////*/////
+<div class="row">
+            <!-- ลบ BLOCK สำหรับ Total Course ออกไปทั้งหมด -->
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card mb-3 widget-content bg-arielle-smile">
+                    <div class="widget-content-wrapper text-white">
+                        <div class="widget-content-left">
+                            <div class="widget-heading">Total Exam</div>
+                            <div class="widget-subheading" style="color:transparent;">.</div>
+                        </div>
+                        <div class="widget-content-right">
+                            <div class="widget-numbers text-white">
+                            <?php 
+                                    // ดึงจำนวนผู้เข้าสอบทั้งหมดจากฐานข้อมูล
+                                    $seltotalex = $conn->query("SELECT COUNT(*) AS exam FROM exam_tbl");
+                                    $totalExam = $seltotalex->fetch(PDO::FETCH_ASSOC)['exam']; // ดึงค่า totalexaminee
+                                ?>
+                                <span><?php echo $totalExam; ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+            <!-- ลบ BLOCK สำหรับ Total Course ออกไปทั้งหมด -->
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card mb-3 widget-content bg-arielle-smile">
+                    <div class="widget-content-wrapper text-white">
+                        <div class="widget-content-left">
+                            <div class="widget-heading">Total Result</div>
+                            <div class="widget-subheading" style="color:transparent;">.</div>
+                        </div>
+                        <div class="widget-content-right">
+                            <div class="widget-numbers text-white">
+                            <?php 
+                                    // ดึงจำนวนผู้เข้าสอบทั้งหมดจากฐานข้อมูล
+                                    $seltotalre = $conn->query("SELECT COUNT(*) AS re FROM exam_attempt Where exmne_id = '$exmneId'");
+                                    $totalresult = $seltotalre->fetch(PDO::FETCH_ASSOC)['re']; // ดึงค่า totalexaminee
+                                ?>
+                                <span><?php echo $totalresult; ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="app-main__outer">
+    <div id="refreshData">
+    <div class="app-main__inner">
+        <div class="app-page-title">
+            <div class="page-title-wrapper">
+                <div class="page-title-heading">
+                    <div class="page-title-icon">
+                        <i class="pe-7s-car icon-gradient bg-mean-fruit">
+                        </i>
+                    </div>
+                    <div>Analytics Dashboard
+                        <div class="page-title-subheading">
+                          This is an example dashboard created using build-in elements and components.
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </div>
+        
+        <div class="row">
+
+        <div class="col-md-6 col-xl-4">
+                <div class="card mb-3 widget-content bg-arielle-smile">
+                    <div class="widget-content-wrapper text-white">
+                        <div class="widget-content-left">
+                            <div class="widget-heading">Total Exam</div>
+                            <div class="widget-subheading" style="color:transparent;">.</div>
+                        </div>
+                        <div class="widget-content-right">
+                            <div class="widget-numbers text-white">
+                            <?php 
+                                    // ดึงจำนวนผู้เข้าสอบทั้งหมดจากฐานข้อมูล
+                                    $seltotalex = $conn->query("SELECT COUNT(*) AS exam FROM exam_tbl");
+                                    $totalExam = $seltotalex->fetch(PDO::FETCH_ASSOC)['exam']; // ดึงค่า totalexaminee
+                                ?>
+                                <span><?php echo $totalExam; ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-4">
+                <div class="card mb-3 widget-content bg-grow-early">
+                    <div class="widget-content-wrapper text-white">
+                        <div class="widget-content-left">
+                            <div class="widget-heading">Total Result</div>
+                            <div class="widget-subheading" style="color:transparent;">.</div>
+                        </div>
+                        <div class="widget-content-right">
+                            <div class="widget-numbers text-white">
+                            <?php 
+                                    // ดึงจำนวนผู้เข้าสอบทั้งหมดจากฐานข้อมูล
+                                    $seltotalre = $conn->query("SELECT COUNT(*) AS re FROM exam_attempt Where exmne_id = '$exmneId'");
+                                    $totalresult = $seltotalre->fetch(PDO::FETCH_ASSOC)['re']; // ดึงค่า totalexaminee
+                                ?>
+                                <span><?php echo $totalresult; ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+</div>
+
+
+<div class="row">
+    <div class="col-md-6 col-xl-4">
+        <div class="card mb-3 widget-content bg-love-kiss">
+            <div class="widget-content-wrapper text-white">
+                <div class="widget-content-left">
+                    <div class="widget-heading">Select Exam</div>
+                    <div class="widget-subheading">Choose an exam to start</div>
+                </div>
+                <div class="widget-content-right">
+                    <form action="start_exam.php" method="post">
+                        <select name="exam_id" class="form-control">
+                            <?php 
+                                $exams = $conn->query("SELECT id, name FROM exam_tbl");
+                                while ($exam = $exams->fetch(PDO::FETCH_ASSOC)) {
+                                    echo "<option value='{$exam['id']}'>{$exam['name']}</option>";
+                                }
+                            ?>
+                        </select>
+                        <button type="submit" class="btn btn-primary mt-2">Start Exam</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-4">
+        <div class="card mb-3 widget-content bg-amy-crisp">
+            <div class="widget-content-wrapper text-white">
+                <div class="widget-content-left">
+                    <div class="widget-heading">View Results</div>
+                    <div class="widget-subheading">Check your exam results</div>
+                </div>
+                <div class="widget-content-right">
+                    <form action="view_results.php" method="post">
+                        <select name="exam_id" class="form-control">
+                            <?php 
+                                $results = $conn->query("SELECT DISTINCT exam_id FROM exam_attempt WHERE exmne_id = '$exmneId'");
+                                while ($result = $results->fetch(PDO::FETCH_ASSOC)) {
+                                    $examName = $conn->query("SELECT name FROM exam_tbl WHERE id = '{$result['exam_id']}'")->fetch(PDO::FETCH_ASSOC)['name'];
+                                    echo "<option value='{$result['exam_id']}'>{$examName}</option>";
+                                }
+                            ?>
+                        </select>
+                        <button type="submit" class="btn btn-primary mt-
