@@ -34,15 +34,20 @@
                 if($selExmne->rowCount() > 0) {
                   while ($selExmneRow = $selExmne->fetch(PDO::FETCH_ASSOC)) { 
                     $eid          = $selExmneRow['exmne_id'];
-                    $exam_id      = $selExmneRow['exam_id'];         // ได้จาก exam_attempt
+                    $exam_id      = $selExmneRow['exam_id']; // จาก exam_attempt
                     $attemptRound = $selExmneRow['attempt_round'];
-                    $examat_id    = $selExmneRow['examat_id'];         // รหัสการสอบ (Exam Attempt ID)
+                    $examat_id    = $selExmneRow['examat_id']; // รหัสการสอบ (Exam Attempt ID)
                     
                     // ดึงชื่อวิชาจาก exam_tbl โดยใช้ exam_id
-                    $selExName = $conn->query("SELECT * FROM exam_tbl WHERE ex_id='$exam_id'")->fetch(PDO::FETCH_ASSOC);
+                    $selExNameResult = $conn->query("SELECT * FROM exam_tbl WHERE ex_id='$exam_id'");
+                    if($selExNameResult && $selExNameResult->rowCount() > 0) {
+                        $selExName = $selExNameResult->fetch(PDO::FETCH_ASSOC);
+                    } else {
+                        // หากไม่พบข้อมูล exam_tbl (เช่น ผู้ใช้ยังไม่เสร็จข้อสอบ) ให้ข้ามแถวนี้
+                        continue;
+                    }
                     
-                    // นับคะแนนโดยเชื่อมโยงตาราง exam_question_tbl, exam_answers และ exam_attempt
-                    // โดยตรวจสอบให้ attempt_round, exam_id, exmne_id และ examat_id ตรงกัน
+                    // ดึงคะแนนจากการสอบ โดยเชื่อมโยงตาราง exam_question_tbl, exam_answers และ exam_attempt
                     $selScore = $conn->query("SELECT * FROM exam_question_tbl eqt 
                                               INNER JOIN exam_answers ea 
                                                 ON eqt.eqt_id = ea.quest_id 
@@ -57,6 +62,10 @@
                                                 AND ea.attempt_round='$attemptRound'
                                                 AND ea.exans_status='new'
                                               ");
+                    if($selScore === false) {
+                        // หาก query ผิดพลาดหรือไม่มีข้อมูล ให้ข้ามแถวนี้
+                        continue;
+                    }
                     $scoreCount = $selScore->rowCount();
                     $over       = $selExName['ex_questlimit_display'];
                     
@@ -64,8 +73,8 @@
                     $rating = ($over > 0) ? ($scoreCount / $over) * 100 : 0;
               ?>
                   <tr>
-                    <td><?php echo $selExmneRow['exmne_fullname']; ?></td>
-                    <td><?php echo $selExName['ex_title']; ?></td>
+                    <td><?php echo htmlspecialchars($selExmneRow['exmne_fullname']); ?></td>
+                    <td><?php echo htmlspecialchars($selExName['ex_title']); ?></td>
                     <td>
                       <span><?php echo $scoreCount; ?></span> / <?php echo $over; ?>
                     </td>
