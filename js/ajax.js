@@ -49,7 +49,7 @@ $(document).on("submit", "#examineeSignup", function () {
 });
 
 // Submit Feedbacks
-$(document).on("submit","#addFeebacks", function(){
+$(document).on("submit","#addFeedbacks", function(){
   $.post("query/submitFeedbacksExe.php", $(this).serialize(), function(data){
      if(data.res == "success")
      {
@@ -58,7 +58,7 @@ $(document).on("submit","#addFeebacks", function(){
          'your feedbacks has been submitted successfully',
          'success'
        )
-       $('#addFeebacks')[0].reset();
+       $('#addFeedbacks')[0].reset();
      }
      else
      {

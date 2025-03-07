@@ -1,7 +1,7 @@
 <!-- Modal For Add Feedback -->
 <div class="modal fade" id="feedbacksModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
-    <form class="refreshFrm" id="addFeebacks" method="post">
+    <form class="refreshFrm" id="addFeedbacks" method="post">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="exampleModalLabel">Submit Feedbacks</h5>
